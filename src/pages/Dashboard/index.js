@@ -207,7 +207,7 @@ const Dashboard = ({navigation}) => {
         </View>
         <View style={styles.line}/>
         <View style={{width : '100%',
-            height : '85%',
+            //height : '85%',
             padding : 5,
             flexDirection : 'row',
             flexWrap : 'wrap',
@@ -220,7 +220,7 @@ const Dashboard = ({navigation}) => {
                   <Text style={{marginTop : 8, fontWeight : 'bold'}}>{product.name}</Text>
                   <Image style={styles.imageProduct} source = {{uri : Config.BASE_URL + `/${product.img}`}}/>
                   <Text style={{marginVertical : 10}}>{Rupiah(parseInt(product.price))}</Text>
-                  <Text>{product.description}</Text>
+                  <Text>{ product.description }</Text>
                 </View>
                 {/* <View style={{height : 50, backgroundColor : 'red', alignItems : 'center'}}>
                   <ButtonCustom
