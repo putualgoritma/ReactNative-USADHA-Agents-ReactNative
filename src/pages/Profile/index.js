@@ -17,8 +17,10 @@ import {useIsFocused} from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from 'react-native-config';
-
-
+import LocationServicesDialogBox from "react-native-android-location-services-dialog-box";
+import { PermissionsAndroid } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
 
 function useForceUpdate() {
   const [refresh, setRefresh] = useState(0); // integer state
@@ -69,22 +71,74 @@ const Profile = ({navigation}) => {
   const [status, setStatus] = useState(form.status)
   const [password, setPassword] = useState(null)
   const [confirmPassword, setConfirmPassword] = useState(null)
+  const [location, setLocation] = useState({
+    latitude: 0.00000000,
+    longitude: 0.00000000
+  })  
   let dataUpdate = {
     id : '',
     name : '',
     phone : '',
     email : '',
     // password : '',
-    address : ''
-  } 
-
+    address : '',
+    lat :'',
+    lng : '',
+  }
   useEffect(() => {
     if(isFocused){
       getPaket()
+      
+      LocationServicesDialogBox.checkLocationServicesIsEnabled({
+        message: "<h2 style='color: #0af13e'>Use Location ?</h2>This app wants to change your device settings:<br/><br/>Use GPS, Wi-Fi, and cell network for location<br/><br/><a href='#'>Learn more</a>",
+        ok: "YES",
+        cancel: "NO",
+      }).then(function(success) {
+          requestLocationPermission().then((result) => {
+            Geolocation.getCurrentPosition((position) => {
+              setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude, 
+            })
+            setLoading(false)
+              },
+              (error) => {
+                  console.log(error);    
+                  setLoading(false)
+              },
+                  { enableHighAccuracy: true, timeout: 200000, maximumAge: 1000 },
+              );
+          })
+      }).catch((error) => {
+          console.log(error.message); // error.message => "disabled"
+          setLoading(false)
+      })
     }
-    // setItem1(data1);
+    
+
+
   }, [isFocused])
 
+
+  const requestLocationPermission =  async () => {
+    try {
+        const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        {
+          'title': 'Location Permission',
+          'message': 'MyMapApp needs access to your location'
+        }
+        )
+
+       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+           console.log("Location permission granted")
+       } else {
+           console.log("Location permission denied")
+       }
+    } catch (err) {
+       console.warn(err)
+    }
+  }
 
   const getPaket = () => {
     Axios.get(Config.API_PACKAGES_AGENT, 
@@ -144,6 +198,8 @@ const Profile = ({navigation}) => {
     dataUpdate.phone = form.phone
     dataUpdate.email = form.email
     dataUpdate.id = form.id
+    dataUpdate.lng = form.lng
+    dataUpdate.lat = form.lat
     setLoading(true)
     if(password !== null ) {
      if(password === confirmPassword){
@@ -442,8 +498,33 @@ const Profile = ({navigation}) => {
                           onPress : () => updateData()
                       }
                   ]
-              )}
+                )}
               />
+            </View>
+            <View style={{marginTop:40}}>
+                <MapView
+                    style={styles.map}
+                    //  provider={PROVIDER_GOOGLE}
+                    // showsUserLocation
+                    initialRegion={{
+                      latitude: parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat),
+                      longitude: parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng),
+                      latitudeDelta:0.0022,
+                      longitudeDelta:0.0121}}
+                      followsUserLocation={true}
+                >
+                    <Marker
+                        coordinate={{latitude : (parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat)), longitude:(parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng))}}
+                        // onDragEnd={e => console.log('onDragEnd', e.nativeEvent.coordinate.latitude)}
+                        onDragEnd={(e) => setForm({
+                            ...form,
+                            lat : e.nativeEvent.coordinate.latitude,
+                            lng : e.nativeEvent.coordinate.longitude
+                        })}
+                        draggable
+                    >
+                    </Marker>
+                </MapView>
             </View>
           </View>
         </ScrollView>
@@ -556,5 +637,9 @@ const styles = StyleSheet.create({
     backgroundColor : 'rgb(0, 230, 64)',
     borderColor : 'rgb(0, 230, 64)',
     color : '#ffffff'
+  },
+  map : {
+    width : '100%',
+    height : 300 
   }
 });
