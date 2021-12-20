@@ -33,7 +33,8 @@ import {
   Notif,
   Reset,
   UploadImg,
-  LogNotif
+  LogNotif,
+  Pay
 } from '../pages';
 import {ButtomNavigator, NotifAlert} from '../component';
 
@@ -206,6 +207,11 @@ const Router = () => {
       <Stack.Screen
         name="LogNotif"
         component={LogNotif}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Pay"
+        component={Pay}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

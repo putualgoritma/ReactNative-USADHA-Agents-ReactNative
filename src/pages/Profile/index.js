@@ -1,31 +1,30 @@
-import React, {useState, useEffect} from 'react';
-import {Alert, Image, StyleSheet, Text, View, ActivityIndicator, FlatList, BackHandler} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Geolocation from 'react-native-geolocation-service';
+import { useIsFocused } from '@react-navigation/native';
+import Axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { Alert, BackHandler, FlatList, Image, PermissionsAndroid, StyleSheet, Text, View } from 'react-native';
+import LocationServicesDialogBox from "react-native-android-location-services-dialog-box";
+import Config from 'react-native-config';
 import {
   ScrollView,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity
 } from 'react-native-gesture-handler';
-import {barcode, profile, promo} from '../../assets';
-import {ButtonCustom, Header, HeaderComponent, Releoder} from '../../component';
-import {colors} from '../../utils/colors';
-import Axios from 'axios';
-import {useDispatch, useSelector} from 'react-redux';
-import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import { Rupiah } from '../../helper/Rupiah';
-import {useIsFocused} from '@react-navigation/native';
-import QRCode from 'react-native-qrcode-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Config from 'react-native-config';
-import LocationServicesDialogBox from "react-native-android-location-services-dialog-box";
-import { PermissionsAndroid } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import Geolocation from '@react-native-community/geolocation';
-
+import QRCode from 'react-native-qrcode-svg';
+import Select2 from 'react-native-select-two';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useDispatch, useSelector } from 'react-redux';
+import { profile } from '../../assets';
+import { ButtonCustom, HeaderComponent, Releoder } from '../../component';
+import { Rupiah } from '../../helper/Rupiah';
+import { colors } from '../../utils/colors';
 function useForceUpdate() {
   const [refresh, setRefresh] = useState(0); // integer state
   return () => setRefresh((refresh) => ++refresh); // update the state to force render
 }
+import { renameKey } from '../../utils';
 
 const ItemAGen = ({ item, onPress, style }) => (
  <View>
@@ -65,15 +64,19 @@ const Profile = ({navigation}) => {
   var data1 = [
     {label: '---', value: null, icon: () => <Icon name="flag" size={18} color="#900" />}
   ]
+  const [enableLocation, setEnableLocation] = useState()
   const [agen,setAgen] = useState(data1)
   const forceUpdate = useForceUpdate();
   const [item1, setItem1] = useState(null);
   const [status, setStatus] = useState(form.status)
   const [password, setPassword] = useState(null)
+  const [provinces, setProvinces] = useState(null)
+  const [cities, setCities] = useState(null)
+  const [oldCities, setOldCities] = useState(null)
   const [confirmPassword, setConfirmPassword] = useState(null)
   const [location, setLocation] = useState({
-    latitude: 0.00000000,
-    longitude: 0.00000000
+    latitude: null,
+    longitude: null
   })  
   let dataUpdate = {
     id : '',
@@ -84,60 +87,109 @@ const Profile = ({navigation}) => {
     address : '',
     lat :'',
     lng : '',
+    province_id : '',
+    city_id : ''
   }
   useEffect(() => {
     if(isFocused){
-      getPaket()
-      
       LocationServicesDialogBox.checkLocationServicesIsEnabled({
         message: "<h2 style='color: #0af13e'>Use Location ?</h2>This app wants to change your device settings:<br/><br/>Use GPS, Wi-Fi, and cell network for location<br/><br/><a href='#'>Learn more</a>",
         ok: "YES",
         cancel: "NO",
-      }).then(function(success) {
-          requestLocationPermission().then((result) => {
-            Geolocation.getCurrentPosition((position) => {
+      }).then(succes => {
+        Promise.all([getPaket(), requestLocationPermission(), locationApi()]).then(res => {
+            Geo().then(loc => {
+                setLocation({
+                  latitude: loc.coords.latitude,
+                  longitude: loc.coords.longitude, 
+                })
+                setLoading(false)
+            }).catch(err => {
               setLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude, 
+                latitude:0.00000000,
+                longitude: 0.00000000, 
+              })
+                Alert.alert('Error', JSON.stringify(err))
+                setLoading(false)
             })
-            setLoading(false)
-              },
-              (error) => {
-                  console.log(error);    
-                  setLoading(false)
-              },
-                  { enableHighAccuracy: true, timeout: 200000, maximumAge: 1000 },
-              );
-          })
-      }).catch((error) => {
-          console.log(error.message); // error.message => "disabled"
-          setLoading(false)
+        }).catch((e) => {
+          console.log(e);
+        })
+      }).catch((e) => {
+        console.log(e.message) ;
+        setLoading(false)
       })
     }
-    
-
-
   }, [isFocused])
+
+  useEffect(() => {
+    filterCity(userReducer.province_id)
+  }, [oldCities])
+
+  const Geo =() => {
+    const promiseGeo = new Promise((resolve, reject) => {
+      Geolocation.getCurrentPosition((position) => {
+          resolve(position)
+      },
+          error => reject(error) ,
+        { enableHighAccuracy: true, timeout: 200000, maximumAge: 1000 },
+      );
+    });
+    return promiseGeo
+  }
+ 
 
 
   const requestLocationPermission =  async () => {
+    let info ='';
     try {
         const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        {
-          'title': 'Location Permission',
-          'message': 'MyMapApp needs access to your location'
-        }
+          {
+            'title': 'Location Permission',
+            'message': 'MyMapApp needs access to your location'
+          }
         )
 
        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-           console.log("Location permission granted")
+          setEnableLocation(true)
        } else {
-           console.log("Location permission denied")
+          setEnableLocation(false)
        }
     } catch (err) {
-       console.warn(err)
+        info=1
     }
+
+    return enableLocation
+  }
+
+  const locationApi = () => {
+    Axios.get('http://adminc.belogherbal.com/api/open/location', {
+      headers : {
+        'Accept' : 'application/json'
+      }
+    }).then((result) => {
+      // console.log(result);
+      result.data.province.forEach(obj => {renameKey(obj, 'title', 'name')});
+      result.data.city.forEach(obj => {renameKey(obj, 'title', 'name')});
+      setProvinces( result.data.province)
+      setOldCities(result.data.city)
+    }).catch((e) => {
+      console.log('location', e);
+    })
+  }
+
+  const filterCity = (id) => {
+    let data = []
+    if(oldCities){
+      oldCities.map((item, index) => {
+        if(item.province_id == id){
+          data[index] = item
+        }
+      })
+    }
+
+    setCities(data)
   }
 
   const getPaket = () => {
@@ -156,6 +208,8 @@ const Profile = ({navigation}) => {
       alert('koneksi error, mohon buka ulang aplikasinya')
       BackHandler.exitApp()
     });
+
+    return 0;
     // console.log('jajajajajajaj')
   }
 
@@ -198,8 +252,10 @@ const Profile = ({navigation}) => {
     dataUpdate.phone = form.phone
     dataUpdate.email = form.email
     dataUpdate.id = form.id
-    dataUpdate.lng = form.lng
-    dataUpdate.lat = form.lat
+    dataUpdate.lng = form.lng == 0.00000000 ? location.longitude : form.lng
+    dataUpdate.lat = form.lat == 0.00000000 ? location.latitude : form.lat
+    dataUpdate.province_id = form.province_id
+    dataUpdate.city_id = form.city_id
     setLoading(true)
     if(password !== null ) {
      if(password === confirmPassword){
@@ -232,7 +288,8 @@ const Profile = ({navigation}) => {
       setLoading(false)
     }
 
-    console.log('data form',form)
+    // console.log('data form',form)
+    // console.log('data form',TOKEN)
     // console.log('data profile',)
   };
 
@@ -470,6 +527,54 @@ const Profile = ({navigation}) => {
               value={form.phone}
               onChangeText={(value) => onInputChange('phone', value)}
             />
+              <Text>Provinsi</Text>
+            {provinces &&
+              <Select2
+              isSelectSingle
+              style={{ borderRadius: 5 }}
+              searchPlaceHolderText='Seacrh Province'
+              colorTheme={colors.default}
+              popupTitle="Select Province"
+              // title={form.provinces.title}
+              title={form.provinces ? form.provinces.title : 'Mohon isi data Provinsi'}
+              selectButtonText='select'
+              cancelButtonText = 'cancel'
+              data={provinces}
+              onSelect={value => {
+                onInputChange('province_id', value[0])
+                filterCity(value[0])
+              }}
+              style={{borderColor :colors.default, borderTopWidth : 0, borderRightWidth : 0,  borderLeftWidth : 0,}}
+              onRemoveItem={value => {
+                onInputChange('province_id', value[0])
+              }}
+            />
+            }
+             <View style={{marginVertical : 10}} />
+             {(cities && form.city_id !=='') &&
+              <>
+              <Text>Kota</Text>
+              <View style={{marginVertical : 10}} />
+                  <Select2
+                  isSelectSingle
+                  searchPlaceHolderText='Search City'
+                  style={{ borderRadius: 5 }}
+                  colorTheme={colors.default}
+                  popupTitle="Select Province"
+                  title={form.city ? form.city.title : 'Mohon isi data Kota'}
+                  selectButtonText='select'
+                  cancelButtonText = 'cancel'
+                  data={cities}
+                  onSelect={value => {
+                    onInputChange('city_id', value[0])
+                  }}
+                  onRemoveItem={value => {
+                    onInputChange('city_id', value[0])
+                  }}
+                  style={{borderColor :colors.default, borderTopWidth : 0, borderRightWidth : 0,  borderLeftWidth : 0,}}
+                />
+              </>
+              }
             <Input
               title="Alamat  "
               multiline={true}
@@ -501,30 +606,33 @@ const Profile = ({navigation}) => {
                 )}
               />
             </View>
+            <Text>{form.lat + ' dan ' + form.lng}</Text>
             <View style={{marginTop:40}}>
-                <MapView
-                    style={styles.map}
-                    //  provider={PROVIDER_GOOGLE}
-                    // showsUserLocation
-                    initialRegion={{
-                      latitude: parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat),
-                      longitude: parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng),
-                      latitudeDelta:0.0022,
-                      longitudeDelta:0.0121}}
-                      followsUserLocation={true}
-                >
-                    <Marker
-                        coordinate={{latitude : (parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat)), longitude:(parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng))}}
-                        // onDragEnd={e => console.log('onDragEnd', e.nativeEvent.coordinate.latitude)}
-                        onDragEnd={(e) => setForm({
-                            ...form,
-                            lat : e.nativeEvent.coordinate.latitude,
-                            lng : e.nativeEvent.coordinate.longitude
-                        })}
-                        draggable
-                    >
-                    </Marker>
-                </MapView>
+                {(location.latitude && location.longitude) &&
+                   <MapView
+                      style={styles.map}
+                      //  provider={PROVIDER_GOOGLE}
+                      // showsUserLocation
+                      initialRegion={{
+                        latitude: parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat),
+                        longitude: parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng),
+                        latitudeDelta:0.0022,
+                        longitudeDelta:0.0121}}
+                        followsUserLocation={true}
+                  >
+                      <Marker
+                          coordinate={{latitude : (parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat)), longitude:(parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng))}}
+                          // onDragEnd={e => console.log('onDragEnd', e.nativeEvent.coordinate.latitude)}
+                          onDragEnd={(e) => setForm({
+                              ...form,
+                              lat : e.nativeEvent.coordinate.latitude,
+                              lng : e.nativeEvent.coordinate.longitude
+                          })}
+                          draggable
+                      >
+                      </Marker>
+                  </MapView>
+                }
             </View>
           </View>
         </ScrollView>

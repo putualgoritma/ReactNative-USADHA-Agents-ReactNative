@@ -29,7 +29,7 @@ import Notif from './Notif';
 import Reset from './Reset';
 import UploadImg from './UploadImg';
 import LogNotif from './LogNotif';
-
+import Pay from './TopUp/pay';
 export {
   Product,
   Profile,
@@ -61,5 +61,6 @@ export {
   Notif,
   Reset,
   UploadImg,
-  LogNotif
+  LogNotif,
+  Pay
 };

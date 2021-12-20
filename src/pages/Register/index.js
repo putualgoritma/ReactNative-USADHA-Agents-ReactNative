@@ -14,7 +14,8 @@ import { token_api } from '../../redux';
 import Releoder from '../../component/Releoder';
 import { Header } from "react-native-elements";
 import Config from 'react-native-config';
-
+import { renameKey } from '../../utils';
+import Select2 from "react-native-select-two"
 const Input = ({title, ...rest}) => {
   return (
     <View>
@@ -36,7 +37,9 @@ const dateRegister = () => {
 
 const Register = ({navigation, btnAktif}) => {
   const [toggleCheckBox, setToggleCheckBox] = useState(false);
-
+  const [provinces, setProvinces] = useState(null)
+  const [cities, setCities] = useState(null)
+  const [oldCities, setOldCities] = useState(null)
   //data
   const [form, setForm] = useState({
     register: dateRegister(),
@@ -45,10 +48,12 @@ const Register = ({navigation, btnAktif}) => {
     phone: '',
     email: '',
     address: '',
+    province_id : null,
+    city_id : null
   });
   const [display, setDisplay] = useState('flex');
   const dispatch = useDispatch();
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const onInputChange = (input, value) => {
     setForm({
@@ -57,9 +62,41 @@ const Register = ({navigation, btnAktif}) => {
     });
   };
 
-  const tampil = () => {
-    console.log(form);
-  };
+  useEffect(() => {
+    locationApi();
+  },[])
+
+
+  
+  const locationApi = () => {
+    Axios.get('https://admin.belogherbal.com/api/open/location', {
+      headers : {
+        'Accept' : 'application/json'
+      }
+    }).then((result) => {
+      console.log(result);
+      result.data.province.forEach(obj => {renameKey(obj, 'title', 'name')});
+      result.data.city.forEach(obj => {renameKey(obj, 'title', 'name')});
+      setProvinces( result.data.province)
+      setOldCities
+      (result.data.city)
+    }).catch((e) => {
+      console.log('location', e);
+    }).finally(() => setIsLoading(false))
+  }
+
+  const filterCity = (id) => {
+    let data = []
+    oldCities.map((item, index) => {
+      if(item.province_id == id){
+        data[index] = item
+      }
+    })
+
+    console.log(data);
+
+    setCities(data)
+  }
 
   var btnAktif = {
     borderWidth: 1,
@@ -213,6 +250,52 @@ const Register = ({navigation, btnAktif}) => {
               onFocus={() => setDisplay('none')}
               onBlur={() => setDisplay('flex')}
             />
+             <Text>Province</Text>
+            <View style={{marginVertical : 10}} />
+             <Select2
+                isSelectSingle
+                style={{ borderRadius: 5 }}
+                searchPlaceHolderText='Search Province'
+                colorTheme={colors.default}
+                popupTitle="Select Province"
+                title="Select Province"
+                selectButtonText='select'
+                cancelButtonText = 'cancel'
+                data={provinces}
+                onSelect={value => {
+                  onInputChange('province_id', value[0])
+                  filterCity(value)
+                }}
+                style={{borderColor :colors.default, borderTopWidth : 0, borderRightWidth : 0,  borderLeftWidth : 0,}}
+                onRemoveItem={value => {
+                  onInputChange('province_id', value[0])
+                }}
+              />
+              <View style={{marginVertical : 10}} />
+             {form.province_id &&
+              <>
+              <Text>City</Text>
+              <View style={{marginVertical : 10}} />
+                 <Select2
+                  isSelectSingle
+                  searchPlaceHolderText='Search City'
+                  style={{ borderRadius: 5 }}
+                  colorTheme={colors.default}
+                  popupTitle="Select City"
+                  title="Select City"
+                  selectButtonText='select'
+                  cancelButtonText = 'cancel'
+                  data={cities}
+                  onSelect={value => {
+                    onInputChange('city_id', value[0])
+                  }}
+                  onRemoveItem={value => {
+                    onInputChange('city_id', value[0])
+                  }}
+                  style={{borderColor :colors.default, borderTopWidth : 0, borderRightWidth : 0,  borderLeftWidth : 0,}}
+                />
+              </>
+             }
             <Input
               title="Adrres  "
               multiline={true}

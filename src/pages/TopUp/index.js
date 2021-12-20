@@ -8,13 +8,13 @@ import {
 } from 'react-native';
 import {colors} from '../../utils/colors';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { TextInput} from 'react-native-gesture-handler';
+import {ScrollView, TextInput} from 'react-native-gesture-handler';
 import {Rupiah} from '../../helper/Rupiah';
-import { useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import Axios from 'axios';
-import { ButtonCustom, Header2, Releoder } from '../../component';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ButtonCustom, Header2, HeaderComponent, Releoder } from '../../component';
 import { Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Config from 'react-native-config';
 
 const NominalData = [
@@ -56,9 +56,9 @@ const TopUp = ({navigation}) => {
   const [point, setPoint] = useState(0)
   const [isLoading, setIsLoading] = useState(true);
   const [typeTf, setTypeTf]=useState(null)
-
+  const [selectType, setSelectType] = useState(null)
   useEffect(() => {
-    Axios.get(Config.API_POINT + `${userReducer.id}`, {
+    Axios.get(Config.API_POINT+`${userReducer.id}`, {
       headers : {
         Authorization: `Bearer ${TOKEN}`,
         'Accept' : 'application/json' 
@@ -88,7 +88,7 @@ const TopUp = ({navigation}) => {
   };
 
   const renderItem = ({item}) => {
-    borderColor = item.id === selectedId ? colors.btn : '#fbf6f0';
+    borderColor = item.id === selectedId ? '#ff781f' : '#fbf6f0';
     if (item.nominal !== nominal) {
       borderColor = '#fbf6f0';
     }
@@ -105,7 +105,7 @@ const TopUp = ({navigation}) => {
   };
 
   const renderItemTypeTransfer = ({item}) => {
-    borderColor = item.id === selectedIdTypeTransfer ? colors.btn : '#fbf6f0';
+    borderColor = item.id === selectedIdTypeTransfer ? '#ff781f' : '#fbf6f0';
 
     return (
       <ItemTypeTransfer
@@ -119,26 +119,6 @@ const TopUp = ({navigation}) => {
     );
   };
 
-  const actionTopUP = () => {
-    setIsLoading(true)
-    Axios.post(Config.API_TOPUP, formTopUp,
-    {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        'Accept' : 'application/json' 
-      }
-    }
-  ).then((result) => {
-    setPoint(point + formTopUp.amount)
-    setIsLoading(false)
-    navigation.navigate('NotifAlert', {notif : '1. Bank BRI \n PT. Usadha Bhakti Buana \n No.Rek 001701003292302 \n \n 2.Bank BCA \n A.n PT Usadha Bhakti Buana \n No.Rek 0498696999'} );
-  }).catch((error) => {
-     console.log('error ' + error);
-      setIsLoading(false)
-    });
-
-    console.log(formTopUp)
-  };
 
   const dateRegister = () => {
     var todayTime = new Date();
@@ -154,11 +134,55 @@ const TopUp = ({navigation}) => {
     memo : 'Top up poin',
     accounts_id : selectedIdTypeTransfer,
     amount : nominal,
+    customer_name : userReducer.name,
+    customer_email : userReducer.email
   }
 
-  // useEffect(() => {
-  //   formTopUp.amount = nominal
-  // }, [nominal])
+  const actionTopup = () => {
+    if(selectType== 'otomatis'){
+      if(nominal !=0){
+         setIsLoading(true)
+          Axios.post('https://admin.belogherbal.com/api/close/topup/map', formTopUp,{
+            headers: {
+              Authorization: `Bearer ${TOKEN}`,
+              'Accept' : 'application/json' 
+            }
+          }).then((res) => {
+            console.log('uri map', res.data.urimap);
+            let urimap = res.data.urimap;
+            if(urimap){
+              navigation.replace('Pay', {urimap : urimap})
+            }
+          }).catch(e => console.log(e.response)).finally(f => setIsLoading(false))
+       }else{
+         alert('mohon lengkapi data ')
+       }
+     }else{
+        if(selectedIdTypeTransfer !=null && nominal !=0){
+          setIsLoading(true)
+          Axios.post(Config.API_TOPUP, formTopUp,
+            {
+              headers: {
+                Authorization: `Bearer ${TOKEN}`,
+                'Accept' : 'application/json' 
+              }
+            }
+          ).then((result) => {
+            setPoint(point + formTopUp.amount)
+            navigation.navigate('NotifAlert', {notif : '1. Bank BRI \n PT. Usadha Bhakti Buana \n No.Rek 001701003292302 \n \n 2.Bank BCA \n A.n PT Usadha Bhakti Buana \n No.Rek 0498696999'} );
+            setIsLoading(false)
+            // navigation.navigate('Bank');
+          }).catch((error) => {
+            console.log('error ' + error);
+              setIsLoading(false)
+            });
+        }else{
+          alert('mohon lengkapi data')
+        }
+     }
+
+      
+  }
 
   if (isLoading) {
     return  (
@@ -180,7 +204,7 @@ const TopUp = ({navigation}) => {
               case 0:
                 return (
                   <View style={styles.infoTopUp}>
-                    <Text style={styles.textTopUpKe}>Top Up ke</Text>
+                    <Text style={styles.textTopUpKe}>Top Up ke </Text>
                     <View style={styles.contentInfoSaldo}>
                       <Icon
                         name="credit-card"
@@ -237,19 +261,29 @@ const TopUp = ({navigation}) => {
                 return (
                   <View style={styles.contentTransfer}>
                     <Text style={styles.textTransferBank}>Transfer Bank</Text>
-                    <View style={styles.boxBtnTambahKartuAtm}>
-                      <FlatList
-                        data={typeTf}
-                        renderItem={renderItemTypeTransfer}
-                        keyExtractor={(item) => item.id}
-                        extraData={selectedIdTypeTransfer}
-                        numColumns={2}
-                        contentContainerStyle={{
-                          flexGrow: 1,
-                          alignItems: 'center',
-                        }}
-                      />
+                    <View style={{ flexDirection:'row', justifyContent:'space-around' , marginTop: 10}} >
+                        <TouchableOpacity style={{ borderWidth : 1, padding : 10 , borderRadius : 5, borderColor:selectType=='manual' ? colors.btn : 'black'}} onPress={() => setSelectType('manual')}>
+                          <Text style={{ color:selectType=='manual' ? colors.btn : 'black'  }}>Konfirmasi Manual</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={{ borderWidth : 1, padding : 10 , borderRadius : 5, borderColor:selectType=='otomatis' ? colors.btn : 'black' }} onPress={() => setSelectType('otomatis')}>
+                          <Text  style={{ color:selectType=='otomatis' ? colors.btn : 'black'  }}>Konfirmasi Otomatis</Text>
+                        </TouchableOpacity>
                     </View>
+                    {(selectType !=null && selectType == 'manual') &&
+                      <View style={styles.boxBtnTambahKartuAtm}>
+                        <FlatList
+                          data={typeTf}
+                          renderItem={renderItemTypeTransfer}
+                          keyExtractor={(item) => item.id}
+                          extraData={selectedIdTypeTransfer}
+                          numColumns={2}
+                          contentContainerStyle={{
+                            flexGrow: 1,
+                            alignItems: 'center',
+                          }}
+                        />
+                      </View>
+                    }
                   </View>
                 );
               default:
@@ -258,13 +292,11 @@ const TopUp = ({navigation}) => {
           }}
         />
       </View>
-      <View style={[styles.containerButton, {display: display}]}>
-        {nominal !== 0 && selectedIdTypeTransfer != null ? (
+      <View style={[styles.containerButton]}>
           <ButtonCustom
             name='Top Up Sekarang'
             width= '85%'
             color= {colors.btn}
-            // func = {() => actionTopUP()}
             func = {() => Alert.alert(
               'Peringatan',
               `Topup sekarang ? `,
@@ -275,19 +307,11 @@ const TopUp = ({navigation}) => {
                   },
                   {
                       text : 'Ya',
-                      onPress : () => actionTopUP()
+                      onPress : () => actionTopup()
                   }
               ]
-          )}
+            )}
           />
-        ) : (
-          <ButtonCustom
-            name='Top Up Sekarang'
-            width= '85%'
-            color= {colors.disable}
-            func = {() => alert('mohon lengkapi data terlebih dahulu')}
-          />
-        )}
       </View>
     </SafeAreaView>
   );
@@ -298,7 +322,7 @@ export default TopUp;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.disable,
+    backgroundColor: '#ffffff',
   },
   header: {
     paddingHorizontal: 20,
@@ -353,7 +377,7 @@ const styles = StyleSheet.create({
   },
   contentNominalTopUp: {
     backgroundColor: '#ffffff',
-    marginTop: 10,
+    marginTop: 5,
     padding: 20,
   },
   textNominalTopUp: {
@@ -385,8 +409,8 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   contentTransfer: {
-    marginTop: 10,
-    backgroundColor: '#ffffff',
+    marginTop: 5,
+    // backgroundColor: 'red',
     padding: 20,
   },
   textTransferBank: {
@@ -405,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderColor: colors.default,
     backgroundColor: '#fbf6f0',
-    marginVertical: 10,
+    marginVertical: 12,
     marginHorizontal: 10,
     width: 160,
     // textAlign : 'center'
@@ -445,7 +469,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   buttonColor: {
-    backgroundColor: colors.btn,
-    borderColor: colors.btn,
+    backgroundColor: '#ff781f',
+    borderColor: '#ff781f',
   },
 });
