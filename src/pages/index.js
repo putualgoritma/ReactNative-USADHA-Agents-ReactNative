@@ -30,6 +30,7 @@ import Reset from './Reset';
 import UploadImg from './UploadImg';
 import LogNotif from './LogNotif';
 import Pay from './TopUp/pay';
+import Members from './Members';
 export {
   Product,
   Profile,
@@ -62,5 +63,6 @@ export {
   Reset,
   UploadImg,
   LogNotif,
-  Pay
+  Pay,
+  Members,
 };

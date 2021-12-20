@@ -34,7 +34,8 @@ import {
   Reset,
   UploadImg,
   LogNotif,
-  Pay
+  Pay,
+  Members,
 } from '../pages';
 import {ButtomNavigator, NotifAlert} from '../component';
 
@@ -62,6 +63,11 @@ const Router = () => {
       <Stack.Screen
         name="Splash"
         component={Splash}
+        options={{headerShown: false}}  
+      />
+      <Stack.Screen
+        name="Members"
+        component={Members}
         options={{headerShown: false}}  
       />
       <Stack.Screen
