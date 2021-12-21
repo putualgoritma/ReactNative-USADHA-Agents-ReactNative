@@ -336,6 +336,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     borderRadius: 10,
     borderColor: colors.btn,
+    height:45,
     // borderColor : 'green'
     backgroundColor: colors.btn,
   },
