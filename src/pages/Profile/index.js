@@ -597,7 +597,7 @@ const Profile = ({navigation}) => {
             />
             <Text style={styles.textUsername}>Type</Text>
             <Text style={styles.type}>{form.type}</Text>
-            <Text onPress={()=>console.log('database',cities)}>Database</Text>
+            {/* <Text onPress={()=>console.log('database',cities)}>Database</Text> */}
          
 
             <View style = {{alignItems : 'center', justifyContent : 'center', marginTop : 20, flexDirection:'row'}}>
