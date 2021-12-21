@@ -98,11 +98,14 @@ const Profile = ({navigation}) => {
         cancel: "NO",
       }).then(succes => {
         Promise.all([getPaket(), requestLocationPermission(), locationApi()]).then(res => {
+          // console.log('dataa',res)
             Geo().then(loc => {
                 setLocation({
                   latitude: loc.coords.latitude,
                   longitude: loc.coords.longitude, 
                 })
+                // console.log('latitude',loc.coords.latitude);
+                // console.log('longitude',loc.coords.longitude);
                 setLoading(false)
             }).catch(err => {
               setLocation({
@@ -164,7 +167,7 @@ const Profile = ({navigation}) => {
   }
 
   const locationApi = () => {
-    Axios.get('http://adminc.belogherbal.com/api/open/location', {
+    Axios.get('http://admin.belogherbal.com/api/open/location', {
       headers : {
         'Accept' : 'application/json'
       }
@@ -245,6 +248,16 @@ const Profile = ({navigation}) => {
     // console.log(form.name)
   };
 
+  const resetLocation=()=>{
+    // alert('hallo');
+    setForm({
+      ...form,
+      lat : location.latitude,
+      lng : location.longitude
+  })
+  };
+  
+
   const updateData = () => {
     dataUpdate.name = form.name
     dataUpdate.address = form.address
@@ -267,7 +280,7 @@ const Profile = ({navigation}) => {
           }
         }
         ).then((result) => {
-          // console.log('data profile',result.data)
+          console.log('data profile',result.data)
           setForm(result.data.data)
           storeDataUser(result.data.data)
           dispatch({type: 'SET_DATA_USER', value: result.data.data});
@@ -584,11 +597,14 @@ const Profile = ({navigation}) => {
             />
             <Text style={styles.textUsername}>Type</Text>
             <Text style={styles.type}>{form.type}</Text>
-            <View style = {{alignItems : 'center', justifyContent : 'center', marginTop : 20}}>
+            <Text onPress={()=>console.log('database',cities)}>Database</Text>
+         
+
+            <View style = {{alignItems : 'center', justifyContent : 'center', marginTop : 20, flexDirection:'row'}}>
               <ButtonCustom
                 name = 'Update Data'
                 color = {colors.btn}
-                width = '100%'
+                width = '50%'
                 // func = {() => updateData()}
                 func = {() => Alert.alert(
                   'Peringatan',
@@ -605,6 +621,17 @@ const Profile = ({navigation}) => {
                   ]
                 )}
               />
+            
+              <View style={{paddingHorizontal:5}}>
+                 
+              </View>
+              <ButtonCustom
+                name = 'Reset'
+                color = {colors.btn}
+                width = '50%'
+                // func = {() => updateData()}
+                func = {() =>resetLocation()}
+              />
             </View>
             <Text>{form.lat + ' dan ' + form.lng}</Text>
             <View style={{marginTop:40}}>
@@ -615,7 +642,7 @@ const Profile = ({navigation}) => {
                       // showsUserLocation
                       initialRegion={{
                         latitude: parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat),
-                        longitude: parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng),
+                        longitude: parseFloat(form.lng) == 0.00000000 ? location.longitude : parseFloat(form.lng),
                         latitudeDelta:0.0022,
                         longitudeDelta:0.0121}}
                         followsUserLocation={true}
