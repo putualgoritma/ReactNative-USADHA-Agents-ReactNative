@@ -40,6 +40,7 @@ const ItemAGen = ({ item, onPress, style }) => (
  </View>
 );
 
+
 const Input = ({title,placeholder ='', ...rest}) => {
   // const userReducer = useSelector((state) => state.UserReducer.data);
   return (
@@ -90,6 +91,12 @@ const Profile = ({navigation}) => {
     province_id : '',
     city_id : ''
   }
+  const getMapRegion = () => ({
+    latitude: form.lat,
+    longitude:form.lng,
+    latitudeDelta: 0.0022,
+    longitudeDelta:0.0121
+  });
   useEffect(() => {
     if(isFocused){
       LocationServicesDialogBox.checkLocationServicesIsEnabled({
@@ -646,6 +653,7 @@ const Profile = ({navigation}) => {
                         latitudeDelta:0.0022,
                         longitudeDelta:0.0121}}
                         followsUserLocation={true}
+                        region={getMapRegion()}
                   >
                       <Marker
                           coordinate={{latitude : (parseFloat(form.lat) == 0.00000000 ?  location.latitude : parseFloat(form.lat)), longitude:(parseFloat(form.lng) == 0.00000000 ?location.longitude : parseFloat(form.lng))}}
