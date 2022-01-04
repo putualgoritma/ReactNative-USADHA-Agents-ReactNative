@@ -8,7 +8,7 @@ import { useSelector } from 'react-redux';
 import { profile } from '../../assets';
 import { ButtonCustom, Header2, Releoder } from '../../component';
 import { colors } from '../../utils/colors';
-import { Image, StyleSheet, Text, View, FlatList, TextInput } from 'react-native';
+import { Image, StyleSheet, Text, View, FlatList, TextInput,Button } from 'react-native';
 
 const List = (props) => {
   return (
@@ -158,11 +158,12 @@ const Members = ({ navigation }) => {
           marginVertical: 10
         }}
       />
-        <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'row', }}>
           <TextInput style={styles.search} value={find} onChangeText={(item) => setFind(item)} ></TextInput>
           <ButtonCustom
             name='Filter'
             width='30%'
+            height={50}
             color={colors.btn}
             func={() => { setPage(1); filter() }}
           />

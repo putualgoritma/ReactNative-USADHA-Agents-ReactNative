@@ -237,6 +237,7 @@ const Transfer = ({ navigation, route }) => {
               width='40%'
               color={colors.btn}
               func={() => { navigation.navigate('Members') }}
+              height={50}
             />
           </View>
 
@@ -296,6 +297,7 @@ const Transfer = ({ navigation, route }) => {
             <ButtonCustom
               name='Transfer'
               width='85%'
+              
               color={colors.btn}
               // func = {() => {generateCodeOTP(); setModalVisible(true)}}
               func={() => Alert.alert(

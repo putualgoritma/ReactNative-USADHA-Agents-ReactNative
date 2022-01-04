@@ -8,8 +8,8 @@ import Icon from "react-native-vector-icons/dist/MaterialCommunityIcons";
 export default function ButtonCustom(props) {
   return (
     <Button
-      buttonStyle={{ backgroundColor : props.color}}
-      containerStyle={{width : props.width, borderRadius : props.radius == null? 10 : props.radius}}
+      buttonStyle={{ backgroundColor : props.color, height: props.height ? props.height : null}}
+      containerStyle={{width : props.width, borderRadius : props.radius == null? 10 : props.radius,}}
       onPress={props.func}
       title={props.name}
       titleProps={{}}

@@ -1,15 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View,FlatList,Dimensions } from 'react-native';
 import {colors} from '../../utils/colors';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import {ScrollView, TextInput} from 'react-native-gesture-handler';
 import {useDispatch, useSelector} from 'react-redux';
 import Axios from 'axios';
 import {Header2, Releoder} from '../../component';
 import { Rupiah } from '../../helper/Rupiah';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Config from 'react-native-config';
-
+import {useIsFocused} from '@react-navigation/native';
 const ItemHistory = (props) => {
   var color = '#61b15a';
 
@@ -18,8 +16,8 @@ const ItemHistory = (props) => {
   }
 
   return (
-    <View>
-      <View style={{backgroundColor: '#f2efea'}}>
+    <View style={{alignItems:'center', width:400}}>
+      <View style={{backgroundColor: '#f2efea',width:400}}>
         <Text
           style={{
             marginHorizontal: 20,
@@ -30,7 +28,7 @@ const ItemHistory = (props) => {
           {props.date}
         </Text>
       </View>
-      <View style={{paddingHorizontal: 20, paddingVertical: 10}}>
+      <View >
         <Text style={{fontWeight: 'bold', fontSize: 15}}>{props.jenis}</Text>
         <View
           style={{
@@ -50,64 +48,117 @@ const HistoryPoint = ({navigation}) => {
   const userReducer = useSelector((state) => state.UserReducer);
   const TOKEN = useSelector((state) => state.TokenApi);
   const [dataHistory, setDataHistory] = useState({}); 
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState();
+  const [refresh, setRefresh] = useState(false)
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    Axios.get(Config.API_HISTORY_POINT + `${userReducer.id}`, {
-      headers : {
+    if (isFocused) {
+        setLoading(true)
+        getData()          
+    } else {
+        setPage(1)
+        setData([])
+    }
+
+}, [isFocused, page])
+    const getData = async () => {
+      Promise.all([apiHistory()]).then(res => {
+        console.log('hasilnyaaa', res)
+        if (page > 1) {
+          setData(data.concat(res[0].data))
+        } else {
+          setData(res[0].data)
+        }
+        setLastPage(res[0].last_page)
+        setLoading(false)
+        setRefresh(false)
+      }).catch(e => {
+        setLoading(false)
+        setRefresh(false)
+      })
+    };
+
+const apiHistory = () => {
+  const promise = new Promise((resolve, reject) => {
+    Axios.get(Config.API_HISTORY_POINT + `${userReducer.id}`+`?page=${page}`, 
+    {
+      headers: {
         Authorization: `Bearer ${TOKEN}`,
         'Accept' : 'application/json' 
       }
+    }
+    ).then((result) => {
+      console.log('hasil data1', result.data.data)
+      resolve(result.data.data);
+    }, (err) => {
+      reject(err);
+      alert('error1')
     })
-    .then((res) => {
-      // setProduct(res.data.data);
-      // setLoading(false);
-      setDataHistory(res.data.data)
-      console.log('notif', res.data.data)
-      setLoading(false)
-    }).catch((err) => {
-      setLoading(false)
-      navigation.navigate('History')
-      alert('mohon di coba ulang')
-    })
-  }, [])
+  })
+  return promise;
+}
 
+const handleLoadMore = () => {
+  if (page < lastPage) {
+      setPage(page + 1);
+  }
+}
+const onRefresh = () => {
+  setRefresh(true)
+
+  }
+  useEffect(() => {
+    getData()
+  }, [refresh])
+
+const ItemSeparatorView = () => {
+  return (
+      // Flat List Item Separator
+      <View
+          style={{
+              marginVertical: 10
+          }}
+      />
+  );
+};
+const renderItem = ({ item }) => {
+  return (
+    <ItemHistory
+    date={item.orders.register}
+    jenis={item.memo}
+    total={item.amount}
+    type = {item.type}
+    key = {item.id}
+    />
+  )
+}
   if (loading) {
     return (
       <Releoder/>
     )
   }
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={{flex: 1}}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={styles.container}>
         <Header2 title ='History Point' btn={() => navigation.goBack()}/>
-        <ScrollView>
-          {/* <ItemHistory
-            date="21 Oktober 2020"
-            jenis="Telkomsel"
-            total="20.000.000"
-          /> */}
-          {dataHistory.map ((item) => {
-          return (
-            <ItemHistory
-            date={item.orders.register}
-            jenis={item.memo}
-            total={item.amount}
-            type = {item.type}
-            key = {item.id}
+          <FlatList
+          // ListHeaderComponent={<Text>Hallo</Text>}
+              keyExtractor={(item, index) => index.toString()}
+              data={data}
+              ItemSeparatorComponent={ItemSeparatorView}
+              contentContainerStyle={{ alignItems: 'center' }}
+              renderItem={renderItem}
+              ListFooterComponent={loading ? <Text>Sedang Memuat</Text> : null}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.4}
+              onRefresh={onRefresh}
+              refreshing={refresh}
             />
-          )
-          })}
-          
-        </ScrollView>
       </View>
-      {/* <View style={{ backgroundColor : '#ffffff', height : 55, borderWidth : 1, borderColor : colors.disable, alignItems : 'center', justifyContent : 'center'}}>
-                        <TouchableOpacity style={{borderWidth:1, borderRadius : 50, backgroundColor : colors.disable, borderColor :colors.disable, paddingHorizontal: 100, paddingVertical : 5}}>
-                              <Text style={{color : '#ffffff', fontWeight : 'bold', fontSize : 15}}>
-                                    Top Up Sekarang
-                              </Text>
-                        </TouchableOpacity>
-                  </View> */}
     </SafeAreaView>
   );
 };

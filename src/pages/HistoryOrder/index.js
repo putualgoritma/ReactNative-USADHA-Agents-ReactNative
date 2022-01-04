@@ -1,8 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View,FlatList} from 'react-native';
 import {colors} from '../../utils/colors';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import {ScrollView} from 'react-native-gesture-handler';
 import Axios from 'axios';
 import {useSelector} from 'react-redux';
 import {useIsFocused} from '@react-navigation/native';
@@ -59,51 +57,121 @@ const HistoryOrder = ({navigation}) => {
   const [data, setData] = useState({});
   const userReducer = useSelector((state) => state.UserReducer);
   const TOKEN = useSelector((state) => state.TokenApi);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState();
+  const [loading, setLoading] = useState(true)
+  const [refresh, setRefresh] = useState(false)
   const isFocused = useIsFocused();
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-   Axios.get(Config.API_HISTORY_ORDER + `${userReducer.id}`, 
+    if (isFocused) {
+        setLoading(true)
+        getData()          
+    } else {
+        setPage(1)
+        setData([])
+    }
+
+}, [isFocused, page])
+
+const getData = async () => {
+  Promise.all([apiHistory()]).then(res => {
+    console.log('hasilnyaaa', res)
+    if (page > 1) {
+      setData(data.concat(res[0].data))
+    } else {
+      setData(res[0].data)
+    }
+    setLastPage(res[0].last_page)
+    setLoading(false)
+    setRefresh(false)
+  }).catch(e => {
+    setLoading(false)
+    setRefresh(false)
+  })
+};
+
+const apiHistory = () => {
+  const promise = new Promise((resolve, reject) => {
+    Axios.get(Config.API_HISTORY_ORDER + `${userReducer.id}`+`?page=${page}`, 
     {
       headers: {
         Authorization: `Bearer ${TOKEN}`,
         'Accept' : 'application/json' 
       }
     }
-   ).then((result) => {
-      console.log('history order ',result.data)
-      setData(result.data.data)
-      setIsLoading(false)
-   }).catch((e) => {
-      console.log(e)
-   })
-  }, [])
+    ).then((result) => {
+      console.log('hasil data1', result.data.data)
+      resolve(result.data.data);
+    }, (err) => {
+      reject(err);
+      alert('error1')
+    })
+  })
+  return promise;
+}
 
-  if(isLoading){
+const handleLoadMore = () => {
+  if (page < lastPage) {
+      setPage(page + 1);
+  }
+}
+const onRefresh = () => {
+  setRefresh(true)
+
+  }
+  useEffect(() => {
+    getData()
+  }, [refresh])
+
+const ItemSeparatorView = () => {
+  return (
+      // Flat List Item Separator
+      <View
+          style={{
+              marginVertical: 10
+          }}
+      />
+  );
+};
+
+const renderItem = ({ item }) => {
+  return (
+    <ItemHistory
+    date={item.register}
+    jenis={item.memo}
+    total={item.total}
+    navigasi = {() => {navigation.navigate('HistoryOrderDetail', {data : item})}}
+    name = {item.customers.name}
+    key ={item.id}
+    status = {item.status}
+    statusd = {item.status_delivery}
+  />
+  )
+}
+
+  if(loading){
     return(
       <Releoder/>
     )
   }
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.container}>
         <Header2 title ='History Order Keluar' btn={() => navigation.goBack()}/>
-        <ScrollView>
-          {data.map((item) => {
-            return (
-              <ItemHistory
-              date={item.register}
-              jenis={item.memo}
-              total={item.total}
-              navigasi = {() => {navigation.navigate('HistoryOrderDetail', {data : item})}}
-              name = {item.customers.name}
-              key ={item.id}
-              status = {item.status}
-              statusd = {item.status_delivery}
+        <FlatList
+          // ListHeaderComponent={<Text>Hallo</Text>}
+              keyExtractor={(item, index) => index.toString()}
+              data={data}
+              ItemSeparatorComponent={ItemSeparatorView}
+              contentContainerStyle={{ alignItems: 'center' }}
+              renderItem={renderItem}
+              ListFooterComponent={loading ? <Text>Sedang Memuat</Text> : null}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.4}
+              onRefresh={onRefresh}
+              refreshing={refresh}
             />
-            )
-          })}
-        </ScrollView>
       </View>
     </SafeAreaView>
   );
